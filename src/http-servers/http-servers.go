@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"os"
 	"time"
+
 	"github.com/gorilla/sessions"
-	"container/list"
 )
 
 // http.Handler -> Funktion nimmt http.ResponseWriter und einen http.Request als Argument
@@ -17,14 +17,14 @@ import (
 //POST via Parametern im request body r.Body
 
 func hello(w http.ResponseWriter, req *http.Request) {
-	addCookie(w, "username", "laumi")
+	//addCookie(w, "username", "laumi")
 
 	session, _ := store.Get(req, "cookie-name")
 
 	// Check if user is authenticated
 	if auth, ok := session.Values["authenticated"].(bool); !ok || !auth {
-        	http.Error(w, "Forbidden", http.StatusForbidden)
-        	return
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
 	}
 
 	// fill in the http response
@@ -44,56 +44,42 @@ func headers(w http.ResponseWriter, req *http.Request) {
 func addCookie(w http.ResponseWriter, name string, value string) {
 	expiration := time.Now().AddDate(0, 0, 1)
 	cookie := http.Cookie{
-		Name: name,
-		Value: value,
+		Name:    name,
+		Value:   value,
 		Expires: expiration,
 	}
 	http.SetCookie(w, &cookie)
 }
 
-func getCookie(w http.ResponseWriter, req *http.Request , name string) {
+func getCookie(w http.ResponseWriter, req *http.Request, name string) {
 	cookie, _ := req.Cookie(name)
 	fmt.Fprint(w, cookie)
 }
 
 //session management
 var (
-    // key must be 16, 24 or 32 bytes long (AES-128, AES-192 or AES-256)
-    key = []byte("super-secret-key")
-    store = sessions.NewCookieStore(key)
+	// key must be 16, 24 or 32 bytes long (AES-128, AES-192 or AES-256)
+	key   = []byte("super-secret-key")
+	store = sessions.NewCookieStore(key)
 )
 
 func login(w http.ResponseWriter, req *http.Request) {
-    session, _ := store.Get(req, "cookie-name")
+	session, _ := store.Get(req, "cookie-name")
 
-    //users.PushBack(User{store.Get(req, "cookie-name")}, list.New())
-
-    // Set user as authenticated
-    session.Values["authenticated"] = true
-    session.Save(req, w)
+	// Set user as authenticated
+	session.Values["authenticated"] = true
+	session.Save(req, w)
 }
 
 func logout(w http.ResponseWriter, req *http.Request) {
-    session, _ := store.Get(req, "cookie-name")
+	session, _ := store.Get(req, "cookie-name")
 
-    // Revoke users authentication
-    session.Values["authenticated"] = false
-    session.Save(req, w)
+	// Revoke users authentication
+	session.Values["authenticated"] = false
+	session.Save(req, w)
 }
-
-type User struct {
-	sessionId	string
-	cart		list
-}
-
-
-//user list
-users := list.New()
-
 
 func main() {
-
-	
 
 	var PORT string
 	if PORT = os.Getenv("PORT"); PORT == "" {
@@ -102,14 +88,14 @@ func main() {
 
 	//setzt den default router -> /hello und nimmt die funktion von oben
 	http.HandleFunc("/", hello)
-        http.HandleFunc("/headers", headers)
-	
+	http.HandleFunc("/headers", headers)
+
 	http.HandleFunc("/login", login)
 	http.HandleFunc("/logout", logout)
 
 	//port und handler
 	//nil sagt dass es den default router von eben nutzen soll
-	http.ListenAndServe(":" + PORT, nil)
+	http.ListenAndServe(":"+PORT, nil)
 }
 
 //curl -s http://localhost:8080
