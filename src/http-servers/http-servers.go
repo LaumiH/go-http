@@ -9,6 +9,16 @@ import (
 	"github.com/gorilla/sessions"
 )
 
+var usernames []string
+
+var (
+	// key must be 16, 24 or 32 bytes long (AES-128, AES-192 or AES-256)
+	key = []byte("super-secret-key")
+	//key =
+	//store = sessions.NewCookieStore(key)
+	store = sessions.NewFilesystemStore("", key)
+)
+
 // http.Handler -> Funktion nimmt http.ResponseWriter und einen http.Request als Argument
 //dynamische Requests
 
@@ -32,6 +42,15 @@ func hello(w http.ResponseWriter, req *http.Request) {
 	//io.WriteString(w, "hello!")
 }
 
+func hello_cookie(w http.ResponseWriter, req *http.Request) {
+	cookie := getCookie(w, req, "username")
+	if cookie == nil || Contains(usernames, cookie.Value) {
+		http.Error(w, "Forbidden", http.StatusForbidden)
+		return
+	}
+	fmt.Fprintf(w, "hello\n")
+}
+
 // liest http request header und schreibt sie in die Antwort
 func headers(w http.ResponseWriter, req *http.Request) {
 	for name, headers := range req.Header {
@@ -51,17 +70,13 @@ func addCookie(w http.ResponseWriter, name string, value string) {
 	http.SetCookie(w, &cookie)
 }
 
-func getCookie(w http.ResponseWriter, req *http.Request, name string) {
+func getCookie(w http.ResponseWriter, req *http.Request, name string) *http.Cookie {
 	cookie, _ := req.Cookie(name)
-	fmt.Fprint(w, cookie)
+	return cookie
+	//fmt.Fprint(w, cookie)
 }
 
 //session management
-var (
-	// key must be 16, 24 or 32 bytes long (AES-128, AES-192 or AES-256)
-	key   = []byte("super-secret-key")
-	store = sessions.NewCookieStore(key)
-)
 
 func login(w http.ResponseWriter, req *http.Request) {
 	session, _ := store.Get(req, "cookie-name")
@@ -71,12 +86,31 @@ func login(w http.ResponseWriter, req *http.Request) {
 	session.Save(req, w)
 }
 
+func login_cookie(w http.ResponseWriter, req *http.Request) {
+	addCookie(w, "username", "laumi")
+	usernames = append(usernames, "laumi")
+}
+
+func logout_cookie(w http.ResponseWriter, req *http.Request) {
+	addCookie(w, "username", "")
+	usernames = usernames[:0]
+}
+
 func logout(w http.ResponseWriter, req *http.Request) {
 	session, _ := store.Get(req, "cookie-name")
 
 	// Revoke users authentication
 	session.Values["authenticated"] = false
 	session.Save(req, w)
+}
+
+func Contains(a []string, x string) bool {
+	for _, n := range a {
+		if x == n {
+			return true
+		}
+	}
+	return false
 }
 
 func main() {
