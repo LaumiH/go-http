@@ -1,0 +1,28 @@
+apiVersion: litmuschaos.io/v1alpha1
+kind: ChaosEngine
+metadata:
+  name: pod-delete
+  namespace: http
+spec:
+  annotationCheck: 'true'
+  engineState: 'active'
+  appinfo:
+    appns: 'http'
+    applabel: 'app=http-server'
+    appkind: 'deployment'
+  chaosServiceAccount: pod-delete-sa
+  jobCleanUpPolicy: 'retain' 
+  experiments:
+    - name: pod-delete
+      spec:
+        components:
+          env:
+            # set chaos duration (in sec) as desired
+            - name: TOTAL_CHAOS_DURATION
+              value: '10'
+            # set chaos interval (in sec) as desired
+            - name: CHAOS_INTERVAL
+              value: '10'
+            # pod failures without '--force' & default terminationGracePeriodSeconds
+            - name: FORCE
+              value: 'true'
