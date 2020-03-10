@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"time"
 
 	"github.com/gorilla/sessions"
 )
@@ -14,9 +13,8 @@ var usernames []string
 var (
 	// key must be 16, 24 or 32 bytes long (AES-128, AES-192 or AES-256)
 	key = []byte("super-secret-key")
-	//key =
-	//store = sessions.NewCookieStore(key)
-	store = sessions.NewFilesystemStore("", key)
+	//store = sessions.NewCookieStore(key) //resilience against reboots of the server, as it stores session in a cookie (client side)
+	store = sessions.NewFilesystemStore("", key) //not resilient, as it stores session server-side in its file-system
 )
 
 // http.Handler -> Funktion nimmt http.ResponseWriter und einen http.Request als Argument
@@ -26,8 +24,9 @@ var (
 //GET via r.URL.Query().Get("keyword")
 //POST via Parametern im request body r.Body
 
+//checks if user is authenticated via session id
+//only if authenticated it shows the text
 func hello(w http.ResponseWriter, req *http.Request) {
-	//addCookie(w, "username", "laumi")
 
 	session, _ := store.Get(req, "cookie-name")
 
@@ -38,8 +37,33 @@ func hello(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// fill in the http response
-	fmt.Fprintf(w, "hello\n")
-	//io.WriteString(w, "hello!")
+	fmt.Fprintf(w, "You've been granted access to the secret of secrets!\n")
+}
+
+//session management
+func login(w http.ResponseWriter, req *http.Request) {
+	session, _ := store.Get(req, "cookie-name")
+
+	// Set user as authenticated
+	session.Values["authenticated"] = true
+	session.Save(req, w)
+
+	fmt.Fprintf(w, "Successfully logged in.\n")
+}
+
+func logout(w http.ResponseWriter, req *http.Request) {
+	session, _ := store.Get(req, "cookie-name")
+
+	// Revoke users authentication
+	session.Values["authenticated"] = false
+	session.Save(req, w)
+
+	fmt.Fprintf(w, "Logged out.\n")
+}
+
+/*func login_cookie(w http.ResponseWriter, req *http.Request) {
+	addCookie(w, "username", "laumi")
+	usernames = append(usernames, "laumi")
 }
 
 func hello_cookie(w http.ResponseWriter, req *http.Request) {
@@ -49,15 +73,6 @@ func hello_cookie(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	fmt.Fprintf(w, "hello\n")
-}
-
-// liest http request header und schreibt sie in die Antwort
-func headers(w http.ResponseWriter, req *http.Request) {
-	for name, headers := range req.Header {
-		for _, h := range headers {
-			fmt.Fprintf(w, "%v: /v\n", name, h)
-		}
-	}
 }
 
 func addCookie(w http.ResponseWriter, name string, value string) {
@@ -76,32 +91,9 @@ func getCookie(w http.ResponseWriter, req *http.Request, name string) *http.Cook
 	//fmt.Fprint(w, cookie)
 }
 
-//session management
-
-func login(w http.ResponseWriter, req *http.Request) {
-	session, _ := store.Get(req, "cookie-name")
-
-	// Set user as authenticated
-	session.Values["authenticated"] = true
-	session.Save(req, w)
-}
-
-func login_cookie(w http.ResponseWriter, req *http.Request) {
-	addCookie(w, "username", "laumi")
-	usernames = append(usernames, "laumi")
-}
-
 func logout_cookie(w http.ResponseWriter, req *http.Request) {
 	addCookie(w, "username", "")
 	usernames = usernames[:0]
-}
-
-func logout(w http.ResponseWriter, req *http.Request) {
-	session, _ := store.Get(req, "cookie-name")
-
-	// Revoke users authentication
-	session.Values["authenticated"] = false
-	session.Save(req, w)
 }
 
 func Contains(a []string, x string) bool {
@@ -111,7 +103,7 @@ func Contains(a []string, x string) bool {
 		}
 	}
 	return false
-}
+}*/
 
 func main() {
 
@@ -122,8 +114,6 @@ func main() {
 
 	//setzt den default router -> /hello und nimmt die funktion von oben
 	http.HandleFunc("/", hello)
-	http.HandleFunc("/headers", headers)
-
 	http.HandleFunc("/login", login)
 	http.HandleFunc("/logout", logout)
 
